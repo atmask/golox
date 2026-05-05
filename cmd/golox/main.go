@@ -6,6 +6,8 @@ import (
 	"os"
 )
 
+var hadError bool
+
 func main() {
 	if len(os.Args) > 2 {
 		fmt.Println("Usage: golox [script]")
@@ -37,9 +39,24 @@ func runPrompt() {
 			break
 		}
 		run(scanner.Text())
+
+		// reset in the REPL to not posion the session
+		hadError = false
 	}
 }
 
 func run(source string) {
 	fmt.Println(source)
+	if hadError {
+		os.Exit(65)
+	}
+}
+
+func reportError(line int, msg string) {
+	report(line, "", msg)
+}
+
+func report(line int, where string, msg string) {
+	fmt.Fprintf(os.Stderr, "[line %d] Error%s: %s\n", line, where, msg)
+	hadError = true
 }
