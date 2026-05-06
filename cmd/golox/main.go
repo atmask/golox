@@ -28,6 +28,10 @@ func runFile(path string) error {
 		return err
 	}
 	run(string(bytes))
+	if hadError {
+		os.Exit(65)
+	}
+
 	return nil
 }
 
@@ -47,9 +51,6 @@ func runPrompt() {
 
 func run(source string) {
 	fmt.Println(source)
-	if hadError {
-		os.Exit(65)
-	}
 }
 
 func reportError(line int, msg string) {
