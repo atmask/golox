@@ -4,9 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-)
 
-var hadError bool
+	"github.com/atmask/golox/internal/lox"
+)
 
 func main() {
 	if len(os.Args) > 2 {
@@ -27,8 +27,8 @@ func runFile(path string) error {
 	if err != nil {
 		return err
 	}
-	run(string(bytes))
-	if hadError {
+	errs := run(string(bytes))
+	if len(errs) > 0 {
 		os.Exit(65)
 	}
 
@@ -42,18 +42,23 @@ func runPrompt() {
 		if !scanner.Scan() {
 			break
 		}
+		// Igore Errors and don't poison the REPL
 		run(scanner.Text())
 
-		// reset in the REPL to not posion the session
-		hadError = false
 	}
 }
 
-func run(source string) {
-	fmt.Println(source)
-}
+func run(source string) []lox.ScanError {
+	scanner := lox.NewScanner(source)
+	tokens, errs := scanner.ScanTokens()
 
-func report(line int, where string, msg string) {
-	fmt.Fprintf(os.Stderr, "[line %d] Error%s: %s\n", line, where, msg)
-	hadError = true
+	for _, e := range errs {
+		fmt.Fprintln(os.Stderr, e.Error())
+	}
+
+	for _, t := range tokens {
+		fmt.Println(t)
+	}
+
+	return errs
 }
