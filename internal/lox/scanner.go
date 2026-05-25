@@ -3,6 +3,7 @@ package lox
 type Scanner struct {
 	source  string
 	tokens  []Token
+	errors  []ScanError
 	start   int
 	current int
 	line    int
@@ -15,14 +16,14 @@ func NewScanner(source string) *Scanner {
 	}
 }
 
-func (s *Scanner) ScanTokens() []Token {
+func (s *Scanner) ScanTokens() ([]Token, []ScanError) {
 	for !s.isAtEnd() {
 		s.start = s.current
 		s.scanToken()
 	}
 
 	s.tokens = append(s.tokens, Token{EOF, "", nil, s.line})
-	return s.tokens
+	return s.tokens, s.errors
 }
 
 func (s *Scanner) isAtEnd() bool {
@@ -66,5 +67,7 @@ func (s *Scanner) scanToken() {
 		s.addToken(SEMICOLON, nil)
 	case '*':
 		s.addToken(STAR, nil)
+	default:
+		s.errors = append(s.errors, ScanError{s.line, "Unexpected character: " + string(ch)})
 	}
 }
