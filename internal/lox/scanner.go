@@ -1,5 +1,7 @@
 package lox
 
+import "strconv"
+
 type Scanner struct {
 	source  string
 	tokens  []Token
@@ -55,7 +57,7 @@ func (s *Scanner) match(expected byte) bool {
 }
 
 // peek returns the next character without advancing
-// iff we are not at the end of the line
+// iff we are not at the end of the source
 func (s *Scanner) peek() byte {
 	if s.isAtEnd() {
 		return '\x00'
@@ -63,6 +65,17 @@ func (s *Scanner) peek() byte {
 	return s.source[s.current]
 }
 
+// peekNest returns the next+1 character iff
+// the next+1 character is not beyond the bounds of the source
+func (s *Scanner) peekNext() byte {
+	if (s.current + 1) >= len(s.source) {
+		return '\x00'
+	}
+	return s.source[s.current+1]
+}
+
+// string is utility for parsing string literals when
+// a leading '"' is encountered while scanning
 func (s *Scanner) string() {
 	for !s.isAtEnd() && s.peek() != '"' {
 		if s.peek() == '\n' {
@@ -81,6 +94,34 @@ func (s *Scanner) string() {
 
 	literal := s.source[s.start+1 : s.current-1]
 	s.addToken(STRING, literal)
+}
+
+func (s *Scanner) number() {
+	for isDigit(s.peek()) {
+		s.advance()
+	}
+
+	if s.peek() == '.' && isDigit(s.peekNext()) {
+		// consume the "."
+		s.advance()
+
+		for isDigit(s.peek()) {
+			s.advance()
+		}
+	}
+
+	literal, err := strconv.ParseFloat(s.source[s.start:s.current], 64)
+	if err != nil {
+		s.errors = append(s.errors, ScanError{s.line, "Invalid number: " + err.Error()})
+		return
+	}
+	s.addToken(NUMBER, literal)
+}
+
+// isDigit is a utility free function that checks if a byte
+// is between the sequential literals of '0' and '9'
+func isDigit(ch byte) bool {
+	return ch >= '0' && ch <= '9'
 }
 
 // Given a TokenType and literal, append a Token to the instance slice
@@ -153,6 +194,11 @@ func (s *Scanner) scanToken() {
 	case '"':
 		s.string()
 	default:
-		s.errors = append(s.errors, ScanError{s.line, "Unexpected character: " + string(ch)})
+		switch {
+		case isDigit(ch):
+			s.number()
+		default:
+			s.errors = append(s.errors, ScanError{s.line, "Unexpected character: " + string(ch)})
+		}
 	}
 }
