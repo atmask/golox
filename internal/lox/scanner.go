@@ -39,7 +39,7 @@ func (s *Scanner) advance() byte {
 
 }
 
-// Conditional form of advance()
+// match is a conditional form of advance()
 // Advances iff the next byte == expected
 func (s *Scanner) match(expected byte) bool {
 	if s.isAtEnd() {
@@ -52,6 +52,35 @@ func (s *Scanner) match(expected byte) bool {
 	s.current++
 	return true
 
+}
+
+// peek returns the next character without advancing
+// iff we are not at the end of the line
+func (s *Scanner) peek() byte {
+	if s.isAtEnd() {
+		return '\x00'
+	}
+	return s.source[s.current]
+}
+
+func (s *Scanner) string() {
+	for !s.isAtEnd() && s.peek() != '"' {
+		if s.peek() == '\n' {
+			s.line++
+		}
+		s.advance()
+	}
+
+	if s.isAtEnd() {
+		s.errors = append(s.errors, ScanError{s.line, "Unterminated string."})
+		return
+	}
+
+	// the closing '"'
+	s.advance()
+
+	literal := s.source[s.start+1 : s.current-1]
+	s.addToken(STRING, literal)
 }
 
 // Given a TokenType and literal, append a Token to the instance slice
@@ -109,6 +138,20 @@ func (s *Scanner) scanToken() {
 		} else {
 			s.addToken(GREATER, nil)
 		}
+	case '/':
+		if s.match('/') {
+			for !s.isAtEnd() && s.peek() != '\n' {
+				s.advance()
+			}
+		} else {
+			s.addToken(SLASH, nil)
+		}
+	case ' ', '\r', '\t':
+		// Ignore whitespace``
+	case '\n':
+		s.line++
+	case '"':
+		s.string()
 	default:
 		s.errors = append(s.errors, ScanError{s.line, "Unexpected character: " + string(ch)})
 	}
