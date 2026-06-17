@@ -2,6 +2,25 @@ package lox
 
 import "strconv"
 
+var keywords = map[string]TokenType{
+	"and":    AND,
+	"class":  CLASS,
+	"else":   ELSE,
+	"false":  FALSE,
+	"for":    FOR,
+	"fun":    FUN,
+	"if":     IF,
+	"nil":    NIL,
+	"or":     OR,
+	"print":  PRINT,
+	"return": RETURN,
+	"super":  SUPER,
+	"this":   THIS,
+	"true":   TRUE,
+	"var":    VAR,
+	"while":  WHILE,
+}
+
 type Scanner struct {
 	source  string
 	tokens  []Token
@@ -118,10 +137,33 @@ func (s *Scanner) number() {
 	s.addToken(NUMBER, literal)
 }
 
-// isDigit is a utility free function that checks if a byte
+func (s *Scanner) identifier() {
+	for isAlphaNumeric(s.peek()) {
+		s.advance()
+	}
+	identifier := s.source[s.start:s.current]
+	tokenType, ok := keywords[identifier]
+	if !ok {
+		tokenType = IDENTIFIER
+	}
+	s.addToken(tokenType, nil)
+}
+
+// isDigit is a utility, free function that checks if a byte
 // is between the sequential literals of '0' and '9'
 func isDigit(ch byte) bool {
 	return ch >= '0' && ch <= '9'
+}
+
+// isAlpha is a utility, free function that checks if a bytes is an alphabetical character or underscore
+// if it is, then true is returned
+func isAlpha(ch byte) bool {
+	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_'
+}
+
+// isAlphaNumeric is a utility, free function returning true if a byte is alphanumerci and false otherwise
+func isAlphaNumeric(ch byte) bool {
+	return isDigit(ch) || isAlpha(ch)
 }
 
 // Given a TokenType and literal, append a Token to the instance slice
@@ -197,6 +239,8 @@ func (s *Scanner) scanToken() {
 		switch {
 		case isDigit(ch):
 			s.number()
+		case isAlpha(ch):
+			s.identifier()
 		default:
 			s.errors = append(s.errors, ScanError{s.line, "Unexpected character: " + string(ch)})
 		}
